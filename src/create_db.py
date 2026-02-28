@@ -94,16 +94,34 @@ def create_database():
             signal_corp_event   REAL,
             signal_pref_allot   REAL,
             signal_bulk_deal    REAL,
+            signal_1            REAL,
+            signal_2            REAL,
+            signal_3            REAL,
+            signal_4            REAL,
+            signal_5            REAL,
+            signal_6            REAL,
+            signal_7            REAL,
             phase               TEXT,
             signals_triggered   TEXT,
             UNIQUE(date, symbol)
         )
     ''')
 
+    # ── index_prices ──────────────────────────────────────────────────────────
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS index_prices (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            index_name  TEXT NOT NULL,
+            date        TEXT NOT NULL,
+            close       REAL,
+            UNIQUE(index_name, date)
+        )
+    ''')
+
     conn.commit()
     conn.close()
     print(f"✅ Database created at: {os.path.abspath(DB_PATH)}")
-    print("Tables created: daily_prices, rolling_stats, corporate_events, bulk_deals, manipulation_scores")
+    print("Tables created: daily_prices, rolling_stats, corporate_events, bulk_deals, manipulation_scores, index_prices")
 
 
 if __name__ == '__main__':

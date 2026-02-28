@@ -1,8 +1,9 @@
 """
 data_pipeline.py — Daily data ingestion for the Daily Manipulation Tracker.
 
-Downloads NSE Bhavcopy (equity prices + delivery), Bulk Deals, and Corporate
-Announcements for a given date and stores them in the SQLite database.
+Downloads NSE Bhavcopy (equity prices + delivery), Bulk Deals, Corporate
+Announcements, and NSE Index bhavcopy (for NIFTY 500 benchmark) for a given
+date and stores them in the SQLite database.
 
 Usage:
     python src/data_pipeline.py                  # uses today's date
@@ -642,6 +643,143 @@ def upsert_corporate_events(conn: sqlite3.Connection, announcements: list, dt: d
     return len(rows)
 
 
+# ── 5. NSE Index Bhavcopy (index_prices) ─────────────────────────────────────
+
+def ensure_index_prices_table(conn: sqlite3.Connection):
+    """Create index_prices table if it doesn't exist."""
+    conn.execute("""
+        CREATE TABLE IF NOT EXISTS index_prices (
+            index_name  TEXT NOT NULL,
+            date        TEXT NOT NULL,
+            close       REAL,
+            UNIQUE(index_name, date)
+        )
+    """)
+    conn.commit()
+
+
+def download_index_data(dt: date) -> pd.DataFrame | None:
+    """
+    Download NSE index bhavcopy for the given date.
+
+    URL pattern:
+      https://nsearchives.nseindia.com/content/indices/ind_close_all_DDMMYYYY.csv
+
+    The CSV contains closing prices for all NSE indices including NIFTY 500.
+    Returns a pandas DataFrame or None if unavailable.
+
+    Relevant columns in the CSV (typical):
+      Index Name, Closing Index Value, Opening Index Value, High Index Value,
+      Low Index Value, Change(Points), Change(%), Volume, Turnover (Rs. Cr.),
+      P/E, P/B, Div Yield
+    """
+    ddmmyyyy = dt.strftime("%d%m%Y")
+    url = f"https://nsearchives.nseindia.com/content/indices/ind_close_all_{ddmmyyyy}.csv"
+    log.info("Downloading NSE index bhavcopy for %s from %s…", dt, url)
+    try:
+        session = requests.Session()
+        # First hit NSE homepage to get cookies
+        session.get("https://www.nseindia.com/", headers=NSE_HEADERS, timeout=10)
+        time.sleep(1)
+        resp = session.get(url, headers=NSE_HEADERS, timeout=30)
+        if resp.status_code == 404:
+            log.warning("NSE index bhavcopy not available (404) for %s", dt)
+            return None
+        resp.raise_for_status()
+        text = resp.text
+        if not text or len(text.strip()) < 50:
+            log.warning("NSE index bhavcopy returned empty/short content for %s", dt)
+            return None
+        df = pd.read_csv(io.StringIO(text))
+        df.columns = [c.strip() for c in df.columns]
+        log.info("NSE index bhavcopy columns: %s", list(df.columns))
+        log.info("NSE index bhavcopy rows: %d", len(df))
+        return df
+    except Exception as exc:
+        log.warning("download_index_data failed for %s: %s", dt, exc)
+        return None
+
+
+def upsert_index_prices(conn: sqlite3.Connection, df: pd.DataFrame, dt: date) -> int:
+    """
+    Parse the NSE index bhavcopy DataFrame and store NIFTY 500 (and other
+    indices) into the index_prices table.
+
+    The CSV typically has a column named 'Index Name' and 'Closing Index Value'.
+    We store all indices but primarily care about 'NIFTY 500'.
+
+    Returns count of rows inserted.
+    """
+    if df is None or len(df) == 0:
+        return 0
+
+    date_str = dt.strftime("%Y-%m-%d")
+
+    # Identify the index name column and closing value column
+    # Common column names in NSE index bhavcopy:
+    name_col = None
+    close_col = None
+
+    for col in df.columns:
+        col_lower = col.lower().strip()
+        if col_lower in ("index name", "indexname", "index_name"):
+            name_col = col
+        if col_lower in ("closing index value", "close", "closingindexvalue",
+                         "closing_index_value", "close index value"):
+            close_col = col
+
+    # Fallback: use first column as name, look for 'closing' in column names
+    if name_col is None and len(df.columns) > 0:
+        name_col = df.columns[0]
+        log.warning("Could not identify index name column; using first column: %s", name_col)
+
+    if close_col is None:
+        for col in df.columns:
+            if "clos" in col.lower():
+                close_col = col
+                break
+
+    if name_col is None or close_col is None:
+        log.warning(
+            "Could not identify required columns in index bhavcopy. "
+            "Columns found: %s", list(df.columns)
+        )
+        return 0
+
+    rows = []
+    for _, row in df.iterrows():
+        index_name = str(row[name_col]).strip()
+        if not index_name or index_name.lower() in ("nan", ""):
+            continue
+        close_val = _safe_float(row.get(close_col))
+        if close_val is None:
+            continue
+        rows.append((index_name, date_str, close_val))
+
+    if not rows:
+        log.warning("No valid index rows found in bhavcopy for %s", dt)
+        return 0
+
+    sql = """
+        INSERT OR REPLACE INTO index_prices (index_name, date, close)
+        VALUES (?, ?, ?)
+    """
+    c = conn.cursor()
+    c.executemany(sql, rows)
+    conn.commit()
+    log.info("index_prices: %d rows inserted/replaced for %s", len(rows), dt)
+
+    # Log whether NIFTY 500 was found
+    nifty500_rows = [r for r in rows if "NIFTY 500" in r[0].upper() or r[0].upper() == "NIFTY500"]
+    if nifty500_rows:
+        log.info("NIFTY 500 close for %s: %.2f", dt, nifty500_rows[0][2])
+    else:
+        log.warning("NIFTY 500 not found in index bhavcopy for %s. Available: %s",
+                    dt, [r[0] for r in rows[:10]])
+
+    return len(rows)
+
+
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _safe_float(val):
@@ -698,6 +836,9 @@ def main():
         sys.exit(1)
     conn = sqlite3.connect(DB_PATH)
     log.info("Connected to database: %s", DB_PATH)
+
+    # Ensure index_prices table exists
+    ensure_index_prices_table(conn)
 
     # ── Build NSE session ──────────────────────────────────────────────────────
     nse_session = build_nse_session()
@@ -783,6 +924,24 @@ def main():
     except Exception as exc:
         log.error("Corporate announcements pipeline failed: %s", exc)
 
+    # ── 4. NSE Index Bhavcopy (NIFTY 500 benchmark) ───────────────────────────
+    index_inserted = 0
+    try:
+        time.sleep(2)
+        log.info("Downloading NSE index bhavcopy for %s…", bhavcopy_date)
+        index_df = download_index_data(bhavcopy_date)
+        if index_df is not None and len(index_df) > 0:
+            index_inserted = upsert_index_prices(conn, index_df, bhavcopy_date)
+            log.info("index_prices: %d rows inserted/replaced", index_inserted)
+        else:
+            log.warning(
+                "NSE index bhavcopy not available for %s. "
+                "Signal 4 (Price Detachment) will score 0 until index data is available.",
+                bhavcopy_date,
+            )
+    except Exception as exc:
+        log.error("NSE index bhavcopy pipeline failed: %s", exc)
+
     # ── Summary ───────────────────────────────────────────────────────────────
     print("\n" + "=" * 60)
     print(f"  DATA PIPELINE SUMMARY — {bhavcopy_date}")
@@ -791,6 +950,7 @@ def main():
     print(f"  rolling_stats   : {rolling_inserted:>6} rows inserted/replaced")
     print(f"  bulk_deals      : {bulk_inserted:>6} rows inserted/replaced")
     print(f"  corporate_events: {corp_inserted:>6} rows inserted/replaced")
+    print(f"  index_prices    : {index_inserted:>6} rows inserted/replaced")
     print("=" * 60)
 
     # ── Sample rows from daily_prices ─────────────────────────────────────────
