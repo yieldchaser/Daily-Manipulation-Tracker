@@ -1,0 +1,50 @@
+[
+  {
+    "name": ".gitignore",
+    "path": ".gitignore",
+    "sha": "b7faf403d915ca307532bb0eb9cceaf0214e8e5b",
+    "size": 4688,
+    "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/.gitignore?ref=main",
+    "html_url": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/.gitignore",
+    "git_url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/b7faf403d915ca307532bb0eb9cceaf0214e8e5b",
+    "download_url": "https://raw.githubusercontent.com/yieldchaser/Daily-Manipulation-Tracker/main/.gitignore",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/.gitignore?ref=main",
+      "git": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/b7faf403d915ca307532bb0eb9cceaf0214e8e5b",
+      "html": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/.gitignore"
+    }
+  },
+  {
+    "name": "LICENSE",
+    "path": "LICENSE",
+    "sha": "1aabc32c2f1d397513d18b121df6e7aead7f78c4",
+    "size": 1064,
+    "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/LICENSE?ref=main",
+    "html_url": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/LICENSE",
+    "git_url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/1aabc32c2f1d397513d18b121df6e7aead7f78c4",
+    "download_url": "https://raw.githubusercontent.com/yieldchaser/Daily-Manipulation-Tracker/main/LICENSE",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/LICENSE?ref=main",
+      "git": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/1aabc32c2f1d397513d18b121df6e7aead7f78c4",
+      "html": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/LICENSE"
+    }
+  },
+  {
+    "name": "README.md",
+    "path": "README.md",
+    "sha": "2550bd80baa1e1099d2b4bc952730077a19f3247",
+    "size": 28,
+    "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/README.md?ref=main",
+    "html_url": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/README.md",
+    "git_url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/2550bd80baa1e1099d2b4bc952730077a19f3247",
+    "download_url": "https://raw.githubusercontent.com/yieldchaser/Daily-Manipulation-Tracker/main/README.md",
+    "type": "file",
+    "_links": {
+      "self": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/contents/README.md?ref=main",
+      "git": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/blobs/2550bd80baa1e1099d2b4bc952730077a19f3247",
+      "html": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/blob/main/README.md"
+    }
+  }
+]

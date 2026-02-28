@@ -1,0 +1,80 @@
+[
+  {
+    "sha": "ec05f89e3d274b78b4eecffeb42318d9374df26d",
+    "node_id": "C_kwDORaxzXNoAKGVjMDVmODllM2QyNzRiNzhiNGVlY2ZmZWI0MjMxOGQ5Mzc0ZGYyNmQ",
+    "commit": {
+      "author": {
+        "name": "Prateek",
+        "email": "103288719+yieldchaser@users.noreply.github.com",
+        "date": "2026-02-28T00:39:17Z"
+      },
+      "committer": {
+        "name": "GitHub",
+        "email": "noreply@github.com",
+        "date": "2026-02-28T00:39:17Z"
+      },
+      "message": "Initial commit",
+      "tree": {
+        "sha": "4c1832f948b9541efeb613b3813376bfa337c5a1",
+        "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/trees/4c1832f948b9541efeb613b3813376bfa337c5a1"
+      },
+      "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/git/commits/ec05f89e3d274b78b4eecffeb42318d9374df26d",
+      "comment_count": 0,
+      "verification": {
+        "verified": true,
+        "reason": "valid",
+        "signature": "-----BEGIN PGP SIGNATURE-----\n\nwsFcBAABCAAQBQJpojk1CRC1aQ7uu5UhlAAAOM0QAGGTJTILpLabRpg8i8vAeopC\nvZjTal9QPueKLYf3s6jp3ejFF/QXk3YKlpwMO/AIi2vsN0kO3xIaN/7C1o3f4tP9\n//qYZLrThYIuMRjJogfL2ffA8vvNLdLBS+R6D+kSOQWo+njhRaY8OMFQUPRHM9Rd\ntndYiWAWtdQrLp2tayhz2ATepMZyn8G3WVq2fFwotnk87AHnCGDUVDS9CHDXWGUb\nshVTFj+kfU++Zd170SL0sBvg1wDatxGUn+ZQu57vDn9EfaXrMXXxlbgATVpxSzTx\ne6dC7gw3TCMJs5Ivw6h2+S1JnH/iuDiSb3WDeYZztdNXaLzTJJ7/5zzgr8Q9UYtX\n3/lvx7LtWose3qcv9MQNpKrTaHqCd3sO9tLLTJM+zG/BoGXmsBvrtKA8g9jiey5+\nDcUV8TqlDS9yZzxOvPJAgrqc/iAz2u/wkGeLF+Cdq86SYt/7R+VY3HDhPRP4sz3Q\n0bclYQvRgsNHxELBUmsOpKHYFJA6LGwGtmcyyr5/fZw+bj1H9oHDjghHFZXRGvXX\nkt4ONvPvYskJpL5gSjSwjS15fu8FXpE9FD1cPOPGrmCuH2TAGtdY9Ljg3uU7kTTJ\n5t17YF8TrUxwwXkD5QfHVxO9rfl2W+ocVEfqe6MXniEBOkIBNVLCK6Maa/njUycC\n7gfRTz9S/mtFFxV1jlCz\n=z4j8\n-----END PGP SIGNATURE-----\n",
+        "payload": "tree 4c1832f948b9541efeb613b3813376bfa337c5a1\nauthor Prateek <103288719+yieldchaser@users.noreply.github.com> 1772239157 +0530\ncommitter GitHub <noreply@github.com> 1772239157 +0530\n\nInitial commit",
+        "verified_at": "2026-02-28T00:39:17Z"
+      }
+    },
+    "url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/commits/ec05f89e3d274b78b4eecffeb42318d9374df26d",
+    "html_url": "https://github.com/yieldchaser/Daily-Manipulation-Tracker/commit/ec05f89e3d274b78b4eecffeb42318d9374df26d",
+    "comments_url": "https://api.github.com/repos/yieldchaser/Daily-Manipulation-Tracker/commits/ec05f89e3d274b78b4eecffeb42318d9374df26d/comments",
+    "author": {
+      "login": "yieldchaser",
+      "id": 103288719,
+      "node_id": "U_kgDOBigPjw",
+      "avatar_url": "https://avatars.githubusercontent.com/u/103288719?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/yieldchaser",
+      "html_url": "https://github.com/yieldchaser",
+      "followers_url": "https://api.github.com/users/yieldchaser/followers",
+      "following_url": "https://api.github.com/users/yieldchaser/following{/other_user}",
+      "gists_url": "https://api.github.com/users/yieldchaser/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/yieldchaser/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/yieldchaser/subscriptions",
+      "organizations_url": "https://api.github.com/users/yieldchaser/orgs",
+      "repos_url": "https://api.github.com/users/yieldchaser/repos",
+      "events_url": "https://api.github.com/users/yieldchaser/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/yieldchaser/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "committer": {
+      "login": "web-flow",
+      "id": 19864447,
+      "node_id": "MDQ6VXNlcjE5ODY0NDQ3",
+      "avatar_url": "https://avatars.githubusercontent.com/u/19864447?v=4",
+      "gravatar_id": "",
+      "url": "https://api.github.com/users/web-flow",
+      "html_url": "https://github.com/web-flow",
+      "followers_url": "https://api.github.com/users/web-flow/followers",
+      "following_url": "https://api.github.com/users/web-flow/following{/other_user}",
+      "gists_url": "https://api.github.com/users/web-flow/gists{/gist_id}",
+      "starred_url": "https://api.github.com/users/web-flow/starred{/owner}{/repo}",
+      "subscriptions_url": "https://api.github.com/users/web-flow/subscriptions",
+      "organizations_url": "https://api.github.com/users/web-flow/orgs",
+      "repos_url": "https://api.github.com/users/web-flow/repos",
+      "events_url": "https://api.github.com/users/web-flow/events{/privacy}",
+      "received_events_url": "https://api.github.com/users/web-flow/received_events",
+      "type": "User",
+      "user_view_type": "public",
+      "site_admin": false
+    },
+    "parents": [
+
+    ]
+  }
+]
