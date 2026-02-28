@@ -123,6 +123,15 @@ end_str = end_date.strftime("%Y-%m-%d")
 st.title(f"📊 {selected_symbol} — Manipulation Analysis")
 st.caption(f"Period: {start_str} → {end_str}")
 
+# ── NSE API Availability Warnings ─────────────────────────────────────────────
+st.warning(
+    "⚠️ **Signal 7 — Bulk Deal Anomaly: UNAVAILABLE**\n\n"
+    "The NSE bulk deals API endpoint (`/api/bulk-deal-archives`) has been removed "
+    "and returns HTTP 404 as of early 2026. All known alternative endpoints also fail. "
+    "Signal 7 (Bulk Deal Anomaly) will always score **0** until NSE restores or "
+    "documents a working API endpoint. Scores shown may be **understated** by up to 1.0 point."
+)
+
 # ── Load data (cached) ────────────────────────────────────────────────────────
 @st.cache_data(ttl=300)
 def load_all_data(symbol: str, start: str, end: str):
@@ -557,6 +566,14 @@ with tab4:
 
     corp_df = data["corp_events"]
     bulk_df = data["bulk_deals"]
+
+    # ── Signal availability notices ────────────────────────────────────────
+    st.warning(
+        "⚠️ **Bulk Deals data is currently unavailable** — "
+        "The NSE bulk deals API (`/api/bulk-deal-archives`) returns HTTP 404 as of early 2026 "
+        "(NSE API change). Signal 7 (Bulk Deal Anomaly) scores 0 for all stocks. "
+        "No bulk deal data can be fetched until NSE restores a working endpoint."
+    )
 
     col_ev, col_bd = st.columns(2)
 

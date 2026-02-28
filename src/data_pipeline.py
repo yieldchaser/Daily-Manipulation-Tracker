@@ -407,13 +407,30 @@ def compute_and_upsert_rolling_stats(conn: sqlite3.Connection, target_date: str)
 
 
 # ── 3. Bulk Deals ─────────────────────────────────────────────────────────────
-
+#
+# SIGNAL UNAVAILABILITY NOTE (as of 2026-02):
+# The NSE bulk deals API endpoint has changed and all known variants return 404:
+#   - https://www.nseindia.com/api/bulk-deal-archives?from=...&to=...&type=bulk_deals  → 404
+#   - https://www.nseindia.com/api/bulk-deal-archives?from=...&to=...                  → 404
+#   - https://www.nseindia.com/api/bulk-deals?from=...&to=...                          → 404
+# The suggested alternative https://www.nseindia.com/api/historical/bulk-deals
+# returns an HTML page (not a JSON API endpoint).
+# As a result, Signal 7 (Bulk Deal Anomaly) will always score 0 until NSE
+# restores or documents a working API endpoint.
+#
 def download_bulk_deals(session: requests.Session, dt: date) -> list:
     """
     Download NSE bulk deals for the given date.
     Returns list of dicts or empty list.
+
+    NOTE: As of 2026-02, the NSE bulk deals API endpoint
+    (https://www.nseindia.com/api/bulk-deal-archives) returns HTTP 404.
+    All known alternative endpoints also fail. This function will return
+    an empty list until NSE restores a working API endpoint.
+    Signal 7 (Bulk Deal Anomaly) is therefore unavailable.
     """
     date_str = dt.strftime("%d-%m-%Y")
+    # Primary endpoint (returns 404 as of 2026-02 — NSE API change)
     url = (
         f"https://www.nseindia.com/api/bulk-deal-archives"
         f"?from={date_str}&to={date_str}&type=bulk_deals"
@@ -421,7 +438,12 @@ def download_bulk_deals(session: requests.Session, dt: date) -> list:
     log.info("Downloading bulk deals from: %s", url)
     resp = http_get_with_retry(session, url, headers=NSE_API_HEADERS)
     if resp is None:
-        log.warning("No bulk deals response for %s", dt)
+        log.warning(
+            "Bulk deals API unavailable for %s (HTTP 404). "
+            "NSE has changed/removed the bulk-deal-archives endpoint. "
+            "Signal 7 (Bulk Deal Anomaly) will score 0.",
+            dt,
+        )
         return []
     try:
         data = resp.json()
@@ -461,7 +483,16 @@ def upsert_bulk_deals(conn: sqlite3.Connection, deals: list, dt: date) -> int:
 
 
 # ── 4. Corporate Announcements ────────────────────────────────────────────────
-
+#
+# API STATUS (as of 2026-02):
+# The NSE corporate announcements API endpoint works and returns JSON:
+#   https://www.nseindia.com/api/corporate-announcements?index=equities&from_date=DD-MM-YYYY&to_date=DD-MM-YYYY
+# Response is a JSON list with fields:
+#   symbol, desc (category), an_dt (announcement date), attchmntText (full text),
+#   sm_name (company name), sm_isin, sort_date, seq_id, etc.
+# NOTE: Field names differ from the original code's expectations.
+#   Use 'desc' for event category, 'an_dt' for date, 'attchmntText' for description.
+#
 CORP_KEYWORDS = ["bonus", "split", "preferential", "allotment", "mou", "order", "partnership"]
 
 
@@ -469,6 +500,10 @@ def download_corporate_announcements(session: requests.Session, dt: date) -> lis
     """
     Download NSE corporate announcements for the given date.
     Returns list of dicts or empty list.
+
+    API endpoint: https://www.nseindia.com/api/corporate-announcements
+    Parameters: index=equities, from_date=DD-MM-YYYY, to_date=DD-MM-YYYY
+    Response fields: symbol, desc, an_dt, attchmntText, sm_name, sort_date, etc.
     """
     date_str = dt.strftime("%d-%m-%Y")
     url = (
@@ -482,7 +517,7 @@ def download_corporate_announcements(session: requests.Session, dt: date) -> lis
         return []
     try:
         data = resp.json()
-        # Response may be a list directly or have a 'data' key
+        # Response is a JSON list directly or may have a 'data' key
         if isinstance(data, list):
             announcements = data
         elif isinstance(data, dict):
@@ -509,35 +544,66 @@ def match_keyword(text: str) -> str | None:
 
 
 def upsert_corporate_events(conn: sqlite3.Connection, announcements: list, dt: date) -> int:
-    """Filter and insert corporate events. Returns count inserted."""
+    """Filter and insert corporate events. Returns count inserted.
+
+    Handles the NSE corporate-announcements API response format (as of 2026-02):
+      - symbol: stock symbol
+      - desc: announcement category (e.g. "Bonus Issue", "General Updates")
+      - an_dt: announcement date string like "27-Feb-2026 23:48:08"
+      - sort_date: ISO-like date string "2026-02-27 23:48:08"
+      - attchmntText: full announcement text (used for keyword matching)
+    Also handles legacy field names for backward compatibility.
+    """
     if not announcements:
         return 0
     date_str = dt.strftime("%Y-%m-%d")
     rows = []
     for ann in announcements:
-        # Try various field names
-        subject = str(ann.get("subject", ann.get("desc", ann.get("description", "")))).strip()
+        # symbol field (consistent across old and new API)
         symbol = str(ann.get("symbol", ann.get("Symbol", ""))).strip()
-        ann_date = str(ann.get("ann_date", ann.get("date", date_str))).strip()
 
-        # Normalise ann_date to YYYY-MM-DD
-        try:
-            if "/" in ann_date:
-                ann_date = datetime.strptime(ann_date, "%d/%m/%Y").strftime("%Y-%m-%d")
-            elif "-" in ann_date and len(ann_date) == 10:
-                pass  # already YYYY-MM-DD
-        except ValueError:
-            ann_date = date_str
+        # Event category / subject — new API uses 'desc', old used 'subject'/'description'
+        event_category = str(ann.get("desc", ann.get("subject", ann.get("description", "")))).strip()
 
-        keyword = match_keyword(subject)
+        # Full description text — new API uses 'attchmntText', old used 'subject'/'description'
+        full_text = str(ann.get("attchmntText", ann.get("subject", ann.get("description", "")))).strip()
+
+        # Combine category + full text for keyword matching
+        combined_text = f"{event_category} {full_text}"
+
+        # Announcement date — new API uses 'sort_date' (YYYY-MM-DD HH:MM:SS) or 'an_dt'
+        # Old API used 'ann_date' or 'date'
+        ann_date = date_str
+        for date_field in ["sort_date", "an_dt", "ann_date", "date"]:
+            raw_date = ann.get(date_field, "")
+            if raw_date:
+                raw_date = str(raw_date).strip()
+                try:
+                    # "2026-02-27 23:48:08" format
+                    if len(raw_date) >= 10 and raw_date[4] == "-":
+                        ann_date = raw_date[:10]
+                        break
+                    # "27-Feb-2026 23:48:08" format
+                    elif "-" in raw_date and len(raw_date) >= 11:
+                        ann_date = datetime.strptime(raw_date[:11].strip(), "%d-%b-%Y").strftime("%Y-%m-%d")
+                        break
+                    # "DD/MM/YYYY" format
+                    elif "/" in raw_date:
+                        ann_date = datetime.strptime(raw_date[:10], "%d/%m/%Y").strftime("%Y-%m-%d")
+                        break
+                except ValueError:
+                    continue
+
+        keyword = match_keyword(combined_text)
         if keyword is None:
             continue
 
+        # Use event_category as event_type, full_text as description
         rows.append((
             ann_date,
             symbol,
             keyword,
-            subject[:500],
+            combined_text[:500],
             "NSE",
         ))
 
