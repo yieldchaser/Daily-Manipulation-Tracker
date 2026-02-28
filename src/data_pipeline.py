@@ -126,7 +126,7 @@ def most_recent_trading_day(target: date, lookback: int = 5) -> date:
 
 def download_full_bhavcopy(dt: date):
     """
-    Download the full bhavcopy (with delivery data) for the given date.
+    Download the full bhavcopy (with delivery data) for the given date via direct HTTP.
     Returns a pandas DataFrame or None if unavailable.
 
     The full bhavcopy URL pattern:
@@ -135,11 +135,20 @@ def download_full_bhavcopy(dt: date):
                      LOW_PRICE, LAST_PRICE, CLOSE_PRICE, AVG_PRICE, TTL_TRD_QNTY,
                      TURNOVER_LACS, NO_OF_TRADES, DELIV_QTY, DELIV_PER
     """
-    from jugaad_data.nse import NSEArchives
-    a = NSEArchives()
+    ddmmyyyy = dt.strftime("%d%m%Y")
+    url = f"https://nsearchives.nseindia.com/products/content/sec_bhavdata_full_{ddmmyyyy}.csv"
+    log.info("Downloading full bhavcopy for %s from %s…", dt, url)
     try:
-        log.info("Downloading full bhavcopy for %s…", dt)
-        text = a.full_bhavcopy_raw(dt)
+        session = requests.Session()
+        # First hit NSE homepage to get cookies
+        session.get("https://www.nseindia.com/", headers=NSE_HEADERS, timeout=10)
+        time.sleep(1)
+        resp = session.get(url, headers=NSE_HEADERS, timeout=30)
+        if resp.status_code == 404:
+            log.warning("Full bhavcopy not available (404) for %s", dt)
+            return None
+        resp.raise_for_status()
+        text = resp.text
         if not text or len(text.strip()) < 100:
             log.warning("Full bhavcopy returned empty/short content for %s", dt)
             return None
@@ -149,21 +158,31 @@ def download_full_bhavcopy(dt: date):
         log.info("Full bhavcopy rows: %d", len(df))
         return df
     except Exception as exc:
-        log.warning("full_bhavcopy_raw failed for %s: %s", dt, exc)
+        log.warning("download_full_bhavcopy failed for %s: %s", dt, exc)
         return None
 
 
 def download_cm_bhavcopy(dt: date):
     """
-    Fallback: download the standard CM bhavcopy (no delivery data).
+    Fallback: download the standard CM bhavcopy (no delivery data) via direct HTTP.
     Columns: SYMBOL, SERIES, OPEN, HIGH, LOW, CLOSE, PREVCLOSE, TOTTRDQTY,
              TOTALTRADES, ISIN, TIMESTAMP
     """
-    from jugaad_data.nse import NSEArchives
-    a = NSEArchives()
+    # CM bhavcopy URL pattern: BhavCopy_<DDMMMYYYY>_1.csv (e.g. BhavCopy_27FEB2026_1.csv)
+    ddmmmyyyy = dt.strftime("%d%b%Y").upper()
+    url = f"https://nsearchives.nseindia.com/content/cm/BhavCopy_{ddmmmyyyy}_1.csv"
+    log.info("Downloading CM bhavcopy for %s from %s…", dt, url)
     try:
-        log.info("Downloading CM bhavcopy for %s…", dt)
-        text = a.bhavcopy_raw(dt)
+        session = requests.Session()
+        # First hit NSE homepage to get cookies
+        session.get("https://www.nseindia.com/", headers=NSE_HEADERS, timeout=10)
+        time.sleep(1)
+        resp = session.get(url, headers=NSE_HEADERS, timeout=30)
+        if resp.status_code == 404:
+            log.warning("CM bhavcopy not available (404) for %s", dt)
+            return None
+        resp.raise_for_status()
+        text = resp.text
         if not text or len(text.strip()) < 100:
             log.warning("CM bhavcopy returned empty/short content for %s", dt)
             return None
@@ -173,7 +192,7 @@ def download_cm_bhavcopy(dt: date):
         log.info("CM bhavcopy rows: %d", len(df))
         return df
     except Exception as exc:
-        log.warning("bhavcopy_raw failed for %s: %s", dt, exc)
+        log.warning("download_cm_bhavcopy failed for %s: %s", dt, exc)
         return None
 
 

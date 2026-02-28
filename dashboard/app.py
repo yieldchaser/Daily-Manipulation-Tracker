@@ -109,7 +109,7 @@ with st.sidebar:
         st.rerun()
 
     st.markdown("---")
-    st.caption("Data sourced from NSE via jugaad-data")
+    st.caption("Data sourced from NSE (direct HTTP)")
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
 if not selected_symbol:
@@ -201,11 +201,12 @@ with col5:
 st.markdown("---")
 
 # ── Tabs ──────────────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4 = st.tabs([
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📉 Price & Volume",
     "🚨 Manipulation Scores",
     "📊 Rolling Stats",
     "📋 Events & Deals",
+    "💬 Social Monitoring",
 ])
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -673,6 +674,88 @@ with tab4:
             timeline_df = pd.DataFrame(timeline_rows).sort_values("date", ascending=False)
             timeline_df["date"] = timeline_df["date"].dt.strftime("%Y-%m-%d")
             st.dataframe(timeline_df, use_container_width=True, hide_index=True)
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TAB 5 — Social Monitoring
+# ─────────────────────────────────────────────────────────────────────────────
+with tab5:
+    st.subheader(f"Social Monitoring — {selected_symbol}")
+
+    try:
+        import sqlite3 as _sqlite3
+        import os as _os
+
+        _db_path = _os.path.join(_os.path.dirname(_os.path.abspath(__file__)), '..', 'data', 'tracker.db')
+        _conn = _sqlite3.connect(_db_path)
+        _cursor = _conn.cursor()
+
+        # Check if social_mentions table exists
+        _cursor.execute(
+            "SELECT name FROM sqlite_master WHERE type='table' AND name='social_mentions'"
+        )
+        _table_exists = _cursor.fetchone() is not None
+
+        if not _table_exists:
+            st.info("💬 Social monitoring data not available yet.")
+            st.caption(
+                "The `social_mentions` table has not been created. "
+                "Run the social monitor pipeline to populate this data."
+            )
+        else:
+            _query = """
+                SELECT date, symbol, platform, mention_count, sentiment_score, keywords
+                FROM social_mentions
+                WHERE symbol = ?
+                  AND date BETWEEN ? AND ?
+                ORDER BY date DESC
+            """
+            _social_df = pd.read_sql_query(
+                _query, _conn, params=(selected_symbol, start_str, end_str)
+            )
+
+            if _social_df.empty:
+                st.info("💬 Social monitoring data not available yet.")
+                st.caption(
+                    "No social mentions found for the selected symbol and date range. "
+                    "Data will appear here once the social monitor pipeline has run."
+                )
+            else:
+                _social_df["date"] = pd.to_datetime(_social_df["date"])
+
+                st.caption(f"Total social mentions records: **{len(_social_df)}**")
+
+                # Mention count over time
+                if "mention_count" in _social_df.columns:
+                    fig_social = go.Figure()
+                    for _platform in _social_df["platform"].unique():
+                        _plat_df = _social_df[_social_df["platform"] == _platform]
+                        fig_social.add_trace(go.Scatter(
+                            x=_plat_df["date"],
+                            y=_plat_df["mention_count"],
+                            mode="lines+markers",
+                            name=str(_platform),
+                        ))
+                    fig_social.update_layout(
+                        height=350,
+                        template="plotly_dark",
+                        yaxis=dict(title="Mention Count"),
+                        xaxis=dict(title="Date"),
+                        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                        margin=dict(l=40, r=40, t=40, b=40),
+                    )
+                    st.plotly_chart(fig_social, use_container_width=True)
+
+                # Raw data
+                with st.expander("📄 Raw Social Mentions Data"):
+                    _display_social = _social_df.copy()
+                    _display_social["date"] = _display_social["date"].dt.strftime("%Y-%m-%d")
+                    st.dataframe(_display_social, use_container_width=True)
+
+        _conn.close()
+
+    except Exception as _social_exc:
+        st.info("💬 Social monitoring data not available yet.")
+        st.caption(f"Could not load social monitoring data: {_social_exc}")
 
 # ── Footer ────────────────────────────────────────────────────────────────────
 from datetime import datetime, timezone
