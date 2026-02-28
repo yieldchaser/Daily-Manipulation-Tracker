@@ -210,6 +210,57 @@ def build_plain_english_summary(symbol, vol_ratio, delivery_pct, pct_change,
         return f"{symbol}: no anomalies detected. Phase: {phase}"
 
 
+# ── Social signal helpers ─────────────────────────────────────────────────────
+
+def get_social_score(conn, symbol, date_str):
+    """
+    Query social_mentions table for the given symbol and date.
+    Returns +1.5 if channel_count >= 3, else +0.
+    Returns 0 if no record found or table doesn't exist (handled gracefully).
+    """
+    try:
+        c = conn.cursor()
+        c.execute(
+            "SELECT channel_count FROM social_mentions WHERE symbol = ? AND date = ?",
+            (symbol, date_str),
+        )
+        row = c.fetchone()
+        if row is None:
+            return 0.0
+        channel_count = row[0] if not isinstance(row, sqlite3.Row) else row["channel_count"]
+        return 1.5 if channel_count >= 3 else 0.0
+    except Exception:
+        return 0.0
+
+
+def get_pump_keyword_score(conn, symbol, date_str):
+    """
+    Query social_mentions for sample_text of the given symbol/date.
+    Returns +1.0 if sample_text contains any pump keywords, else 0.
+    Pump keywords: "multibagger", "operator", "hidden gem", "next rocket"
+    """
+    PUMP_KEYWORDS = ["multibagger", "operator", "hidden gem", "next rocket"]
+    try:
+        c = conn.cursor()
+        c.execute(
+            "SELECT sample_text FROM social_mentions WHERE symbol = ? AND date = ?",
+            (symbol, date_str),
+        )
+        row = c.fetchone()
+        if row is None:
+            return 0.0
+        sample_text = row[0] if not isinstance(row, sqlite3.Row) else row["sample_text"]
+        if not sample_text:
+            return 0.0
+        text_lower = sample_text.lower()
+        for keyword in PUMP_KEYWORDS:
+            if keyword in text_lower:
+                return 1.0
+        return 0.0
+    except Exception:
+        return 0.0
+
+
 # ── Main scoring logic ────────────────────────────────────────────────────────
 
 def run_scoring(target_date: str):
@@ -385,8 +436,12 @@ def run_scoring(target_date: str):
         clients_90d = bulk_deals_90d_clients.get(symbol, set())
         s_bulk_deal = signal_bulk_deal(today_clients, deals_7d, clients_90d)
 
+        # Social signal: catches pump before price moves
+        social_score = get_social_score(conn, symbol, target_date)
+        pump_keyword_score = get_pump_keyword_score(conn, symbol, target_date)
+
         # Total score
-        total = s_volume + s_delivery + s_circuit + s_velocity + s_corp_event + s_pref_allot + s_bulk_deal
+        total = s_volume + s_delivery + s_circuit + s_velocity + s_corp_event + s_pref_allot + s_bulk_deal + social_score + pump_keyword_score
 
         # Phase classification
         phase = classify_phase(total, vol_ratio, price_change_30d, delivery_pct, week_52_high, close)
