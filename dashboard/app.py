@@ -170,9 +170,9 @@ with col4:
     if not scores_df.empty and "total_score" in scores_df.columns:
         latest_score = scores_df["total_score"].iloc[-1]
         if pd.notna(latest_score):
-            if latest_score < 0.3:
+            if latest_score < 3.0:
                 risk_label = "🟢 Low"
-            elif latest_score < 0.7:
+            elif latest_score < 7.0:
                 risk_label = "🟡 Medium"
             else:
                 risk_label = "🔴 High"
@@ -304,16 +304,16 @@ with tab2:
         x_min = scores_df["date"].min()
         x_max = scores_df["date"].max()
 
-        fig_score.add_hrect(y0=0, y1=0.3, fillcolor="green", opacity=0.08,
+        fig_score.add_hrect(y0=0, y1=3.0, fillcolor="green", opacity=0.08,
                             line_width=0, annotation_text="Low Risk", annotation_position="left")
-        fig_score.add_hrect(y0=0.3, y1=0.7, fillcolor="orange", opacity=0.08,
+        fig_score.add_hrect(y0=3.0, y1=7.0, fillcolor="orange", opacity=0.08,
                             line_width=0, annotation_text="Medium Risk", annotation_position="left")
-        fig_score.add_hrect(y0=0.7, y1=1.0, fillcolor="red", opacity=0.08,
+        fig_score.add_hrect(y0=7.0, y1=10.0, fillcolor="red", opacity=0.08,
                             line_width=0, annotation_text="High Risk", annotation_position="left")
 
         # Threshold lines
-        fig_score.add_hline(y=0.3, line_dash="dot", line_color="#2ecc71", opacity=0.6)
-        fig_score.add_hline(y=0.7, line_dash="dot", line_color="#e74c3c", opacity=0.6)
+        fig_score.add_hline(y=3.0, line_dash="dot", line_color="#2ecc71", opacity=0.6)
+        fig_score.add_hline(y=7.0, line_dash="dot", line_color="#e74c3c", opacity=0.6)
 
         # Score line
         fig_score.add_trace(
@@ -330,7 +330,7 @@ with tab2:
                                 [0.3, "#f39c12"], [0.7, "#f39c12"],
                                 [0.7, "#e74c3c"], [1.0, "#e74c3c"]],
                     cmin=0,
-                    cmax=1,
+                    cmax=10,
                     showscale=True,
                     colorbar=dict(title="Score", thickness=12),
                 ),
@@ -344,7 +344,7 @@ with tab2:
         fig_score.update_layout(
             height=400,
             template="plotly_dark",
-            yaxis=dict(title="Manipulation Score", range=[0, 1.05]),
+            yaxis=dict(title="Manipulation Score (0–10)", range=[0, 10.5]),
             xaxis=dict(title="Date"),
             margin=dict(l=40, r=40, t=40, b=40),
         )
